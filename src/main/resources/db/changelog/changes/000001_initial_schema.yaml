@@ -1,0 +1,34 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1587585899094-1
+      author: tomwi (generated)
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                  name: id
+                  type: BINARY
+              - column:
+                  name: overview
+                  type: VARCHAR(255)
+              - column:
+                  name: title
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_at
+                  type: VARCHAR(255)
+              - column:
+                  name: year
+                  type: INT
+            tableName: show
+  - changeSet:
+      id: 1587585899094-2
+      author: tomwi (generated)
+      changes:
+        - addPrimaryKey:
+            columnNames: id
+            constraintName: showPK
+            tableName: show
+

@@ -4,6 +4,9 @@ target/
 !**/src/main/**
 !**/src/test/**
 
+### Prevent our secrets file from being committed
+**/application-secrets.yaml
+
 ### STS ###
 .apt_generated
 .classpath

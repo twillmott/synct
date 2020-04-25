@@ -1,15 +1,17 @@
 package io.twillmott.synct.domain;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
+import javax.persistence.*;
 import java.util.UUID;
 
 @Entity
 public class Show {
 
     @Id
+    @GeneratedValue
+    @Column( columnDefinition = "uuid", updatable = false )
     private UUID id;
-//    private ExternalIds externalIds;
+    @OneToOne
+    private ExternalIds externalIds;
     private String title;
     private String overview;
     private String updatedAt;

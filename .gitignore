@@ -4,8 +4,10 @@ target/
 !**/src/main/**
 !**/src/test/**
 
-### Prevent our secrets file from being committed
-**/application-secrets.yaml
+### Prevent our secrets file and db from being committed
+**/secrets.properties
+synct.mv.db
+synct.trace.db
 
 ### STS ###
 .apt_generated

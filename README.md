@@ -9,7 +9,7 @@ When modifying or adding a new entity, create a new database migration script by
 Run a liquibase diff. This diff uses the migration H2 database file as defined in the `liquibase.properties` file.
 
 ```
-mvn package
+mvn package -DskipTests
 mvn liquibase:diff
 ```
 

@@ -16,10 +16,3 @@ spring:
 
   liquibase:
     enabled: true
-
-
-# Secrets are stored in a separate configuration file called application-secrets.yaml. This is included as part of the deployment or development cycle.
-# Secrets are defined as blank here to keep track of what is required.
-secrets:
-  trakt:
-    api-key:

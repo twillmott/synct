@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 1587585899094-1
+      id: 1587722875022-1
       author: tomwi (generated)
       changes:
         - createTable:
@@ -9,7 +9,31 @@ databaseChangeLog:
                   constraints:
                     nullable: false
                   name: id
-                  type: BINARY
+                  type: UUID
+              - column:
+                  name: imdb
+                  type: VARCHAR(255)
+              - column:
+                  name: tmdb
+                  type: INT
+              - column:
+                  name: trakt
+                  type: INT
+              - column:
+                  name: tvdb
+                  type: INT
+            tableName: external_ids
+  - changeSet:
+      id: 1587722875022-2
+      author: tomwi (generated)
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                  name: id
+                  type: UUID
               - column:
                   name: overview
                   type: VARCHAR(255)
@@ -22,13 +46,74 @@ databaseChangeLog:
               - column:
                   name: year
                   type: INT
+              - column:
+                  name: external_ids_id
+                  type: UUID
             tableName: show
   - changeSet:
-      id: 1587585899094-2
+      id: 1587722875022-3
+      author: tomwi (generated)
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                  name: id
+                  type: UUID
+              - column:
+                  name: access_token
+                  type: VARCHAR(255)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: expiry
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: refresh_token
+                  type: VARCHAR(255)
+              - column:
+                  name: scope
+                  type: VARCHAR(255)
+              - column:
+                  name: token_type
+                  type: VARCHAR(255)
+            tableName: trakt_access_token
+  - changeSet:
+      id: 1587722875022-4
+      author: tomwi (generated)
+      changes:
+        - addPrimaryKey:
+            columnNames: id
+            constraintName: external_idsPK
+            tableName: external_ids
+  - changeSet:
+      id: 1587722875022-5
       author: tomwi (generated)
       changes:
         - addPrimaryKey:
             columnNames: id
             constraintName: showPK
             tableName: show
+  - changeSet:
+      id: 1587722875022-6
+      author: tomwi (generated)
+      changes:
+        - addPrimaryKey:
+            columnNames: id
+            constraintName: trakt_access_tokenPK
+            tableName: trakt_access_token
+  - changeSet:
+      id: 1587722875022-7
+      author: tomwi (generated)
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: external_ids_id
+            baseTableName: show
+            constraintName: external_id_fk
+            deferrable: false
+            initiallyDeferred: false
+            referencedColumnNames: id
+            referencedTableName: external_ids
 

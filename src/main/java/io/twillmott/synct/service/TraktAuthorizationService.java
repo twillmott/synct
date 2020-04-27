@@ -3,6 +3,7 @@ package io.twillmott.synct.service;
 import com.uwetrottmann.trakt5.TraktV2;
 import com.uwetrottmann.trakt5.entities.DeviceCode;
 import io.twillmott.synct.domain.TraktAccessToken;
+import io.twillmott.synct.events.publisher.TraktAuthorizedEventPublisher;
 import io.twillmott.synct.repository.TraktAccessTokenRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,20 +28,24 @@ public class TraktAuthorizationService {
     private final TraktAccessTokenRepository traktAccessTokenRepository;
     private final TraktV2 trakt;
     private final ThreadPoolTaskScheduler taskScheduler;
+    private final TraktAuthorizedEventPublisher traktAuthorizedEventPublisher;
 
     @Autowired
     public TraktAuthorizationService(TraktV2 trakt,
                                      ThreadPoolTaskScheduler taskScheduler,
-                                     TraktAccessTokenRepository traktAccessTokenRepository) {
+                                     TraktAccessTokenRepository traktAccessTokenRepository,
+                                     TraktAuthorizedEventPublisher traktAuthorizedEventPublisher) {
         this.trakt = trakt;
         this.taskScheduler = taskScheduler;
         this.traktAccessTokenRepository = traktAccessTokenRepository;
+        this.traktAuthorizedEventPublisher = traktAuthorizedEventPublisher;
     }
 
     @PostConstruct
     public void authorize() {
 
         if (refreshTokenIfExists()) {
+            traktAuthorizedEventPublisher.publish(this, true);
             return;
         }
 
@@ -50,11 +55,13 @@ public class TraktAuthorizationService {
 
             // Poll for the interval to see if the user has authorized us in their browser.
             taskScheduler.scheduleAtFixedRate(new TraktAuthorizationPollingRunner(deviceCode.verification_url,
-                            deviceCode.device_code, deviceCode.user_code, trakt, traktAccessTokenRepository, taskScheduler),
+                            deviceCode.device_code, deviceCode.user_code, trakt, traktAccessTokenRepository,
+                            taskScheduler, traktAuthorizedEventPublisher),
                     deviceCode.interval * 1000L);
 
         } catch (IOException e) {
             log.error("Unable to authorize application.");
+            traktAuthorizedEventPublisher.publish(this, false);
             throw new RuntimeException(e);
         }
     }

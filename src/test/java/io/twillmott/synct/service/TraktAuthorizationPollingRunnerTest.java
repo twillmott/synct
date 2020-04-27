@@ -2,7 +2,7 @@ package io.twillmott.synct.service;
 
 import com.uwetrottmann.trakt5.TraktV2;
 import com.uwetrottmann.trakt5.entities.AccessToken;
-import com.uwetrottmann.trakt5.entities.DeviceCode;
+import io.twillmott.synct.events.publisher.TraktAuthorizedEventPublisher;
 import io.twillmott.synct.repository.TraktAccessTokenRepository;
 import okhttp3.ResponseBody;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +27,8 @@ class TraktAuthorizationPollingRunnerTest {
     TraktAccessTokenRepository traktAccessTokenRepository;
     @Mock
     ThreadPoolTaskScheduler taskScheduler;
+    @Mock
+    TraktAuthorizedEventPublisher traktAuthorizedEventPublisher;
 
     private TraktAuthorizationPollingRunner subject;
 
@@ -39,8 +41,8 @@ class TraktAuthorizationPollingRunnerTest {
                 "userCode",
                 traktV2,
                 traktAccessTokenRepository,
-                taskScheduler
-        );
+                taskScheduler,
+                traktAuthorizedEventPublisher);
     }
 
     @Test
@@ -64,6 +66,7 @@ class TraktAuthorizationPollingRunnerTest {
         verify(traktV2).accessToken("access");
         verify(traktV2).refreshToken("refresh");
         verify(traktAccessTokenRepository).save(toEntity(accessToken));
+        verify(traktAuthorizedEventPublisher).publish(subject, true);
         verify(taskScheduler).shutdown();
 
     }
@@ -83,6 +86,7 @@ class TraktAuthorizationPollingRunnerTest {
         verify(traktV2, times(0)).accessToken("access");
         verify(traktV2, times(0)).refreshToken("refresh");
         verify(traktAccessTokenRepository, times(0)).save(any());
+        verify(traktAuthorizedEventPublisher, times(0)).publish(subject, true);
         verify(taskScheduler, times(0)).shutdown();
 
     }
@@ -104,6 +108,7 @@ class TraktAuthorizationPollingRunnerTest {
         verify(traktV2, times(0)).accessToken("access");
         verify(traktV2, times(0)).refreshToken("refresh");
         verify(traktAccessTokenRepository, times(0)).save(any());
+        verify(traktAuthorizedEventPublisher, times(0)).publish(subject, true);
         verify(taskScheduler, times(0)).shutdown();
 
     }
@@ -132,6 +137,7 @@ class TraktAuthorizationPollingRunnerTest {
         verify(traktV2, times(0)).accessToken("access");
         verify(traktV2, times(0)).refreshToken("refresh");
         verify(traktAccessTokenRepository, times(0)).save(any());
+        verify(traktAuthorizedEventPublisher).publish(subject, false);
         verify(taskScheduler).shutdown();
 
     }

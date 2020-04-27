@@ -6,9 +6,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 @Configuration
 @PropertySource("classpath:secrets.properties")
+@EnableAsync
 public class ApplicationConfig {
 
     @Autowired

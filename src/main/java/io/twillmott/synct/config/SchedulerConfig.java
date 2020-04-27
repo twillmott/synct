@@ -13,7 +13,7 @@ public class SchedulerConfig {
     @Bean
     public ThreadPoolTaskScheduler traktAuthThreadPoolTaskScheduler() {
         ThreadPoolTaskScheduler threadPoolTaskScheduler = new ThreadPoolTaskScheduler();
-        threadPoolTaskScheduler.setPoolSize(1);
+        threadPoolTaskScheduler.setPoolSize(3);
         threadPoolTaskScheduler.setThreadNamePrefix("auth-scheduler-");
         return threadPoolTaskScheduler;
     }

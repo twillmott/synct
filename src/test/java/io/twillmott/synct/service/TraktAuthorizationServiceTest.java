@@ -4,6 +4,7 @@ package io.twillmott.synct.service;
 import com.uwetrottmann.trakt5.TraktV2;
 import com.uwetrottmann.trakt5.entities.DeviceCode;
 import io.twillmott.synct.domain.TraktAccessToken;
+import io.twillmott.synct.events.publisher.TraktAuthorizedEventPublisher;
 import io.twillmott.synct.repository.TraktAccessTokenRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +29,8 @@ class TraktAuthorizationServiceTest {
     TraktV2 traktV2;
     @Mock
     ThreadPoolTaskScheduler threadPoolTaskScheduler;
+    @Mock
+    TraktAuthorizedEventPublisher traktAuthorizedEventPublisher;
 
     @InjectMocks
     TraktAuthorizationService subject;
@@ -53,6 +56,7 @@ class TraktAuthorizationServiceTest {
         verify(traktV2, times(0)).refreshAccessToken(any());
         verify(traktV2).accessToken("access");
         verify(traktV2, times(0)).exchangeDeviceCodeForAccessToken(any());
+        verify(traktAuthorizedEventPublisher).publish(subject, true);
     }
 
     @Test
@@ -98,7 +102,8 @@ class TraktAuthorizationServiceTest {
         verify(traktV2, times(0)).refreshAccessToken("refresh");
         verify(traktV2, times(0)).accessToken("access");
         verify(threadPoolTaskScheduler).scheduleAtFixedRate(eq(new TraktAuthorizationPollingRunner(
-                "verification", "deviceCode", "userCode", traktV2, traktAccessTokenRepository, threadPoolTaskScheduler)),
+                    "verification", "deviceCode", "userCode", traktV2,
+                    traktAccessTokenRepository, threadPoolTaskScheduler, traktAuthorizedEventPublisher)),
                 eq(10000L)
         );
     }
@@ -110,6 +115,7 @@ class TraktAuthorizationServiceTest {
 
         // When
         assertThrows(RuntimeException.class, () -> subject.authorize());
+        verify(traktAuthorizedEventPublisher).publish(subject, false);
     }
 
 

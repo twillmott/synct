@@ -2,6 +2,7 @@ package io.twillmott.synct.service;
 
 import com.uwetrottmann.trakt5.TraktV2;
 import com.uwetrottmann.trakt5.entities.AccessToken;
+import io.twillmott.synct.events.publisher.TraktAuthorizedEventPublisher;
 import io.twillmott.synct.repository.TraktAccessTokenRepository;
 import lombok.EqualsAndHashCode;
 import lombok.SneakyThrows;
@@ -26,6 +27,7 @@ class TraktAuthorizationPollingRunner implements Runnable {
     private final TraktV2 trakt;
     private final TraktAccessTokenRepository traktAccessTokenRepository;
     private final ThreadPoolTaskScheduler taskScheduler;
+    private final TraktAuthorizedEventPublisher traktAuthorizedEventPublisher;
 
     private int count = 0;
 
@@ -35,13 +37,15 @@ class TraktAuthorizationPollingRunner implements Runnable {
             String userCode,
             TraktV2 trakt,
             TraktAccessTokenRepository traktAccessTokenRepository,
-            ThreadPoolTaskScheduler taskScheduler) {
+            ThreadPoolTaskScheduler taskScheduler,
+            TraktAuthorizedEventPublisher traktAuthorizedEventPublisher) {
         this.verificationUrl = verificationUrl;
         this.deviceCode = deviceCode;
         this.userCode = userCode;
         this.trakt = trakt;
         this.traktAccessTokenRepository = traktAccessTokenRepository;
         this.taskScheduler = taskScheduler;
+        this.traktAuthorizedEventPublisher = traktAuthorizedEventPublisher;
     }
 
     @SneakyThrows
@@ -55,6 +59,7 @@ class TraktAuthorizationPollingRunner implements Runnable {
             trakt.accessToken(accessToken.access_token);
             trakt.refreshToken(accessToken.refresh_token);
             traktAccessTokenRepository.save(toEntity(accessToken));
+            traktAuthorizedEventPublisher.publish(this, true);
             taskScheduler.shutdown();
         } else if (response.code() == 400) {
             // The trakt API returns a 400 until the user has entered their code, so we'll keep waiting
@@ -67,6 +72,7 @@ class TraktAuthorizationPollingRunner implements Runnable {
 
         if (count >= 100) {
             log.warn("Authorization unsuccessful. Please restart the application to retry.");
+            traktAuthorizedEventPublisher.publish(this, false);
             taskScheduler.shutdown();
             throw new RuntimeException();
         }

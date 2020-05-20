@@ -1,24 +1,26 @@
 package io.twillmott.synct.service;
 
 import com.uwetrottmann.trakt5.TraktV2;
+import com.uwetrottmann.trakt5.entities.AccessToken;
 import com.uwetrottmann.trakt5.entities.DeviceCode;
 import io.twillmott.synct.domain.TraktAccessToken;
 import io.twillmott.synct.events.publisher.TraktAuthorizedEventPublisher;
 import io.twillmott.synct.repository.TraktAccessTokenRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.time.OffsetDateTime;
+import java.util.concurrent.*;
 
+import static io.twillmott.synct.service.mapper.traktjava.AccessTokenMapper.toEntity;
 import static java.util.Objects.isNull;
 
 /**
  * Service used to authorize a users trakt account via device authentication (https://trakt.docs.apiary.io/#reference/authentication-devices)
- *
+ * <p>
  * The saved access token is written to the database along with the refresh key in order to refresh the token at a later date.
  */
 @Service
@@ -27,16 +29,13 @@ public class TraktAuthorizationService {
 
     private final TraktAccessTokenRepository traktAccessTokenRepository;
     private final TraktV2 trakt;
-    private final ThreadPoolTaskScheduler taskScheduler;
     private final TraktAuthorizedEventPublisher traktAuthorizedEventPublisher;
 
     @Autowired
     public TraktAuthorizationService(TraktV2 trakt,
-                                     ThreadPoolTaskScheduler taskScheduler,
                                      TraktAccessTokenRepository traktAccessTokenRepository,
                                      TraktAuthorizedEventPublisher traktAuthorizedEventPublisher) {
         this.trakt = trakt;
-        this.taskScheduler = taskScheduler;
         this.traktAccessTokenRepository = traktAccessTokenRepository;
         this.traktAuthorizedEventPublisher = traktAuthorizedEventPublisher;
     }
@@ -53,17 +52,36 @@ public class TraktAuthorizationService {
             DeviceCode deviceCode = trakt.generateDeviceCode().body();
             log.info("Please go to " + deviceCode.verification_url + " and enter code: " + deviceCode.user_code);
 
-            // Poll for the interval to see if the user has authorized us in their browser.
-            taskScheduler.scheduleAtFixedRate(new TraktAuthorizationPollingRunner(deviceCode.verification_url,
-                            deviceCode.device_code, deviceCode.user_code, trakt, traktAccessTokenRepository,
-                            taskScheduler, traktAuthorizedEventPublisher),
-                    deviceCode.interval * 1000L);
+            // Poll for the access token and save to the database
+            pollAuthorization(deviceCode).thenApply(accessToken -> {
+                trakt.accessToken(accessToken.access_token);
+                trakt.refreshToken(accessToken.refresh_token);
+                traktAccessTokenRepository.save(toEntity(accessToken));
+                traktAuthorizedEventPublisher.publish(this, true);
+                log.info("Complete");
+                return null;
+            });
 
         } catch (IOException e) {
             log.error("Unable to authorize application.");
             traktAuthorizedEventPublisher.publish(this, false);
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Poll at a specified time interval to get an access token.
+     *
+     * @return A {@link CompletableFuture} that once complete, will supply the access token.
+     */
+    private CompletableFuture<AccessToken> pollAuthorization(DeviceCode deviceCode) {
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        CompletableFuture<AccessToken> authorizationFuture = new CompletableFuture<>();
+        final ScheduledFuture<?> checkFuture = executor.scheduleAtFixedRate(new TraktAuthorizationPollingRunner(
+                        deviceCode.verification_url, deviceCode.device_code, deviceCode.user_code, trakt, authorizationFuture),
+                0, deviceCode.interval, TimeUnit.SECONDS);
+        authorizationFuture.whenComplete((result, thrown) -> checkFuture.cancel(true));
+        return authorizationFuture;
     }
 
     /**

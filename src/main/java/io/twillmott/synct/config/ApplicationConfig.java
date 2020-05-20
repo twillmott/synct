@@ -7,10 +7,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @Configuration
 @PropertySource("classpath:secrets.properties")
 @EnableAsync
+@EnableScheduling
 public class ApplicationConfig {
 
     @Autowired

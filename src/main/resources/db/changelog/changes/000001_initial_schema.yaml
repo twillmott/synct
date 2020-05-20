@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 1587722875022-1
+      id: 1589106964797-1
       author: tomwi (generated)
       changes:
         - createTable:
@@ -10,6 +10,37 @@ databaseChangeLog:
                     nullable: false
                   name: id
                   type: UUID
+              - column:
+                  constraints:
+                    nullable: false
+                  name: number
+                  type: INT
+              - column:
+                  constraints:
+                    nullable: false
+                  name: complete
+                  type: BOOLEAN
+              - column:
+                  name: last_watched
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: season_id
+                  type: UUID
+            tableName: episodes
+  - changeSet:
+      id: 1589106964797-2
+      author: tomwi (generated)
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                  name: id
+                  type: UUID
+              - column:
+                  name: trakt
+                  type: INT
               - column:
                   name: imdb
                   type: VARCHAR(255)
@@ -17,14 +48,11 @@ databaseChangeLog:
                   name: tmdb
                   type: INT
               - column:
-                  name: trakt
-                  type: INT
-              - column:
                   name: tvdb
                   type: INT
             tableName: external_ids
   - changeSet:
-      id: 1587722875022-2
+      id: 1589106964797-3
       author: tomwi (generated)
       changes:
         - createTable:
@@ -35,23 +63,48 @@ databaseChangeLog:
                   name: id
                   type: UUID
               - column:
-                  name: overview
-                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+                  name: number
+                  type: INT
+              - column:
+                  constraints:
+                    nullable: false
+                  name: complete
+                  type: BOOLEAN
+              - column:
+                  name: show_id
+                  type: UUID
+            tableName: seasons
+  - changeSet:
+      id: 1589106964797-4
+      author: tomwi (generated)
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                  name: id
+                  type: UUID
               - column:
                   name: title
                   type: VARCHAR(255)
               - column:
+                  name: overview
+                  type: CLOB
+              - column:
                   name: updated_at
-                  type: VARCHAR(255)
+                  type: TIMESTAMP WITH TIME ZONE
               - column:
                   name: year
                   type: INT
               - column:
                   name: external_ids_id
                   type: UUID
-            tableName: show
+            tableName: shows
   - changeSet:
-      id: 1587722875022-3
+      id: 1589106964797-5
       author: tomwi (generated)
       changes:
         - createTable:
@@ -81,7 +134,15 @@ databaseChangeLog:
                   type: VARCHAR(255)
             tableName: trakt_access_token
   - changeSet:
-      id: 1587722875022-4
+      id: 1589106964797-6
+      author: tomwi (generated)
+      changes:
+        - addPrimaryKey:
+            columnNames: id
+            constraintName: episodesPK
+            tableName: episodes
+  - changeSet:
+      id: 1589106964797-7
       author: tomwi (generated)
       changes:
         - addPrimaryKey:
@@ -89,15 +150,23 @@ databaseChangeLog:
             constraintName: external_idsPK
             tableName: external_ids
   - changeSet:
-      id: 1587722875022-5
+      id: 1589106964797-8
       author: tomwi (generated)
       changes:
         - addPrimaryKey:
             columnNames: id
-            constraintName: showPK
-            tableName: show
+            constraintName: seasonsPK
+            tableName: seasons
   - changeSet:
-      id: 1587722875022-6
+      id: 1589106964797-9
+      author: tomwi (generated)
+      changes:
+        - addPrimaryKey:
+            columnNames: id
+            constraintName: showsPK
+            tableName: shows
+  - changeSet:
+      id: 1589106964797-10
       author: tomwi (generated)
       changes:
         - addPrimaryKey:
@@ -105,15 +174,39 @@ databaseChangeLog:
             constraintName: trakt_access_tokenPK
             tableName: trakt_access_token
   - changeSet:
-      id: 1587722875022-7
+      id: 1589106964797-11
       author: tomwi (generated)
       changes:
         - addForeignKeyConstraint:
             baseColumnNames: external_ids_id
-            baseTableName: show
-            constraintName: external_id_fk
+            baseTableName: shows
+            constraintName: external_ids_fk
             deferrable: false
             initiallyDeferred: false
             referencedColumnNames: id
             referencedTableName: external_ids
+  - changeSet:
+      id: 1589106964797-12
+      author: tomwi (generated)
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: season_id
+            baseTableName: episodes
+            constraintName: season_fk
+            deferrable: false
+            initiallyDeferred: false
+            referencedColumnNames: id
+            referencedTableName: seasons
+  - changeSet:
+      id: 1589106964797-13
+      author: tomwi (generated)
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: show_id
+            baseTableName: seasons
+            constraintName: show_fk
+            deferrable: false
+            initiallyDeferred: false
+            referencedColumnNames: id
+            referencedTableName: shows
 

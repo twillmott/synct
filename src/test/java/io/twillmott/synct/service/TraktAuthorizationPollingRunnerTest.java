@@ -2,20 +2,17 @@ package io.twillmott.synct.service;
 
 import com.uwetrottmann.trakt5.TraktV2;
 import com.uwetrottmann.trakt5.entities.AccessToken;
-import io.twillmott.synct.events.publisher.TraktAuthorizedEventPublisher;
-import io.twillmott.synct.repository.TraktAccessTokenRepository;
 import okhttp3.ResponseBody;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import retrofit2.Response;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
 
-import static io.twillmott.synct.service.mapper.traktjava.AccessTokenMapper.toEntity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
@@ -24,11 +21,7 @@ class TraktAuthorizationPollingRunnerTest {
     @Mock
     TraktV2 traktV2;
     @Mock
-    TraktAccessTokenRepository traktAccessTokenRepository;
-    @Mock
-    ThreadPoolTaskScheduler taskScheduler;
-    @Mock
-    TraktAuthorizedEventPublisher traktAuthorizedEventPublisher;
+    CompletableFuture authorizationFuture;
 
     private TraktAuthorizationPollingRunner subject;
 
@@ -40,13 +33,11 @@ class TraktAuthorizationPollingRunnerTest {
                 "deviceCode",
                 "userCode",
                 traktV2,
-                traktAccessTokenRepository,
-                taskScheduler,
-                traktAuthorizedEventPublisher);
+                authorizationFuture);
     }
 
     @Test
-    void run_savesToken_whenSuccessfullyGainedFromAccessToken() throws IOException {
+    void run_returnsToken_whenSuccessfullyGainedFromAccessToken() throws IOException {
         // Given
         Response response = mock(Response.class);
         AccessToken accessToken = new AccessToken();
@@ -63,16 +54,12 @@ class TraktAuthorizationPollingRunnerTest {
         subject.run();
 
         // Then
-        verify(traktV2).accessToken("access");
-        verify(traktV2).refreshToken("refresh");
-        verify(traktAccessTokenRepository).save(toEntity(accessToken));
-        verify(traktAuthorizedEventPublisher).publish(subject, true);
-        verify(taskScheduler).shutdown();
+        verify(authorizationFuture).complete(accessToken);
 
     }
 
     @Test
-    void run_doesNotSaveToken_whenTraktReturns400() throws IOException {
+    void run_doesNotReturnToken_whenTraktReturns400() throws IOException {
         // Given
         Response response = mock(Response.class);
         when(traktV2.exchangeDeviceCodeForAccessToken("deviceCode")).thenReturn(response);
@@ -83,16 +70,12 @@ class TraktAuthorizationPollingRunnerTest {
         subject.run();
 
         // Then
-        verify(traktV2, times(0)).accessToken("access");
-        verify(traktV2, times(0)).refreshToken("refresh");
-        verify(traktAccessTokenRepository, times(0)).save(any());
-        verify(traktAuthorizedEventPublisher, times(0)).publish(subject, true);
-        verify(taskScheduler, times(0)).shutdown();
+        verify(authorizationFuture, times(0)).complete(any());
 
     }
 
     @Test
-    void run_doesNotSaveToken_whenTraktReturnsError() throws IOException {
+    void run_doesNotReturnToken_whenTraktReturnsError() throws IOException {
         // Given
         Response response = mock(Response.class);
         ResponseBody responseBody = mock(ResponseBody.class);
@@ -105,14 +88,9 @@ class TraktAuthorizationPollingRunnerTest {
         subject.run();
 
         // Then
-        verify(traktV2, times(0)).accessToken("access");
-        verify(traktV2, times(0)).refreshToken("refresh");
-        verify(traktAccessTokenRepository, times(0)).save(any());
-        verify(traktAuthorizedEventPublisher, times(0)).publish(subject, true);
-        verify(taskScheduler, times(0)).shutdown();
+        verify(authorizationFuture, times(0)).complete(any());
 
     }
-
 
 
     @Test
@@ -125,20 +103,13 @@ class TraktAuthorizationPollingRunnerTest {
 
         // When/Then
         // Run 99 times, should not throw exception
-        for (int i = 1; i<100; i++) {
+        for (int i = 1; i < 100; i++) {
             subject.run();
-            verify(traktV2, times(0)).accessToken("access");
-            verify(traktV2, times(0)).refreshToken("refresh");
-            verify(traktAccessTokenRepository, times(0)).save(any());
-            verify(taskScheduler, times(0)).shutdown();
+            verify(authorizationFuture, times(0)).complete(any());
         }
         // 100th run throws exception
         assertThrows(RuntimeException.class, () -> subject.run());
-        verify(traktV2, times(0)).accessToken("access");
-        verify(traktV2, times(0)).refreshToken("refresh");
-        verify(traktAccessTokenRepository, times(0)).save(any());
-        verify(traktAuthorizedEventPublisher).publish(subject, false);
-        verify(taskScheduler).shutdown();
+        verify(authorizationFuture, times(0)).complete(any());
 
     }
 }

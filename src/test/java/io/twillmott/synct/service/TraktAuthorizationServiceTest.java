@@ -2,6 +2,7 @@ package io.twillmott.synct.service;
 
 
 import com.uwetrottmann.trakt5.TraktV2;
+import com.uwetrottmann.trakt5.entities.AccessToken;
 import com.uwetrottmann.trakt5.entities.DeviceCode;
 import io.twillmott.synct.domain.TraktAccessToken;
 import io.twillmott.synct.events.publisher.TraktAuthorizedEventPublisher;
@@ -11,12 +12,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import retrofit2.Response;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 
+import static io.twillmott.synct.service.mapper.traktjava.AccessTokenMapper.toEntity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
@@ -27,8 +29,6 @@ class TraktAuthorizationServiceTest {
     TraktAccessTokenRepository traktAccessTokenRepository;
     @Mock
     TraktV2 traktV2;
-    @Mock
-    ThreadPoolTaskScheduler threadPoolTaskScheduler;
     @Mock
     TraktAuthorizedEventPublisher traktAuthorizedEventPublisher;
 
@@ -83,7 +83,7 @@ class TraktAuthorizationServiceTest {
     }
 
     @Test
-    void authorize_requestsAuthorization_whenAccessTokenDoesNotExist() throws IOException {
+    void authorize_requestsAuthorization_whenAccessTokenDoesNotExist() throws Exception {
         // Given
         DeviceCode deviceCode = new DeviceCode();
         deviceCode.user_code = "userCode";
@@ -95,17 +95,25 @@ class TraktAuthorizationServiceTest {
         when(traktV2.generateDeviceCode()).thenReturn(response);
         when(traktAccessTokenRepository.findFirstByOrderByCreatedAt()).thenReturn(null);
 
+        Response tokenResponse = mock(Response.class);
+        AccessToken accessToken = new AccessToken();
+        accessToken.access_token = "access";
+        accessToken.refresh_token = "refresh";
+        accessToken.created_at = Math.toIntExact(Instant.now().getEpochSecond());
+        accessToken.expires_in = 1000;
+        when(traktV2.exchangeDeviceCodeForAccessToken("deviceCode")).thenReturn(tokenResponse);
+        when(tokenResponse.isSuccessful()).thenReturn(true);
+        when(tokenResponse.body()).thenReturn(accessToken);
+
         // When
         subject.authorize();
 
         // Then
-        verify(traktV2, times(0)).refreshAccessToken("refresh");
-        verify(traktV2, times(0)).accessToken("access");
-        verify(threadPoolTaskScheduler).scheduleAtFixedRate(eq(new TraktAuthorizationPollingRunner(
-                    "verification", "deviceCode", "userCode", traktV2,
-                    traktAccessTokenRepository, threadPoolTaskScheduler, traktAuthorizedEventPublisher)),
-                eq(10000L)
-        );
+        Thread.sleep(100);
+        verify(traktV2).refreshToken("refresh");
+        verify(traktV2).accessToken("access");
+        verify(traktAccessTokenRepository).save(toEntity(accessToken));
+        verify(traktAuthorizedEventPublisher).publish(any(), eq(true));
     }
 
     @Test
@@ -117,7 +125,6 @@ class TraktAuthorizationServiceTest {
         assertThrows(RuntimeException.class, () -> subject.authorize());
         verify(traktAuthorizedEventPublisher).publish(subject, false);
     }
-
 
 
     @Test

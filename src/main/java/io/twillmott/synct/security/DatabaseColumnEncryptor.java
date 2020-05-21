@@ -25,6 +25,12 @@ public class DatabaseColumnEncryptor implements AttributeConverter<String, Strin
     private final Key key;
     private final Cipher cipher;
 
+    // No args constructor for liquibase to use
+    public DatabaseColumnEncryptor() {
+        key = null;
+        cipher = null;
+    }
+
     @Autowired
     public DatabaseColumnEncryptor(@Value("${secrets.database.encryption.secret}") String secret) throws Exception {
         key = new SecretKeySpec(secret.getBytes(), AES);

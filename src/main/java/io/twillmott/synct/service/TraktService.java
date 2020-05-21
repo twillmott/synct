@@ -37,7 +37,7 @@ public class TraktService {
     }
 
     @EventListener
-    private void traktAuthorizedEventListener(TraktAuthorizedEvent event) {
+    void traktAuthorizedEventListener(TraktAuthorizedEvent event) {
         CompletableFuture.runAsync(() -> syncTraktLibrary(true));
     }
 
